@@ -3,95 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Low Poly Muscle Highlighter</title>
+    <title>GLB Muscle Highlighter & Animator</title>
     <style>
         body { margin: 0; font-family: sans-serif; background-color: #f0f0f0; display: flex; height: 100vh; overflow: hidden; }
         #container { flex-grow: 1; position: relative; }
         #canvas { display: block; }
         #controls {
-            width: 280px; /* Slightly wider for better text */
+            width: 280px;
             padding: 20px;
             background-color: #fff;
             box-shadow: -2px 0 5px rgba(0,0,0,0.1);
             overflow-y: auto;
             height: 100%;
-            box-sizing: border-box; /* Include padding in height/width */
+            box-sizing: border-box;
         }
-        #controls h2 { margin-top: 0; }
+        #controls h2, #controls h3 { margin-top: 0; margin-bottom: 10px;}
         #controls label {
             display: block;
             margin-bottom: 10px;
-            padding: 5px; /* Add padding for easier clicking */
-            border-radius: 3px; /* Slightly rounded corners */
+            padding: 5px;
+            border-radius: 3px;
             cursor: pointer;
-            user-select: none; /* Prevent text selection on double click */
-            transition: background-color 0.2s ease; /* Smooth feedback */
+            user-select: none;
+            transition: background-color 0.2s ease;
         }
-         #controls input[type="checkbox"] {
+        #controls input[type="checkbox"] {
             margin-right: 8px;
-            vertical-align: middle; /* Align checkbox better */
-            pointer-events: none; /* Prevent direct interaction with checkbox */
-         }
-         .state-off { color: #555; background-color: #f9f9f9; }
-         .state-off:hover { background-color: #eee; }
-         .state-selected { color: red; font-weight: bold; background-color: #ffe0e0; }
-         .state-completed { color: purple; font-weight: bold; /*text-decoration: line-through;*/ background-color: #f0e0f0; } /* Removed strikethrough for better indeterminate look */
+            vertical-align: middle;
+            pointer-events: none;
+        }
+        .state-off { color: #555; background-color: #f9f9f9; }
+        .state-off:hover { background-color: #eee; }
+        .state-selected { color: red; font-weight: bold; background-color: #ffe0e0; }
+        .state-completed { color: purple; font-weight: bold; background-color: #f0e0f0; }
+
+        #animation-controls { margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd;}
+        #animation-select { width: 100%; padding: 8px; margin-bottom: 10px; }
+        #loading-indicator {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            font-size: 1.2em; color: #555; background: rgba(255, 255, 255, 0.8); padding: 15px; border-radius: 5px; display: none; /* Hidden initially */
+        }
 
     </style>
 </head>
 <body>
     <div id="container">
+        <div id="loading-indicator">Loading Model...</div>
         <canvas id="canvas"></canvas>
     </div>
     <div id="controls">
         <h2>Muscle Groups</h2>
-        <label data-muscle="pectorals">
-            <input type="checkbox" id="cb-pectorals"> Pectorals (Chest)
+        <label data-muscle-name="Pectorals">
+            <input type="checkbox"> Pectorals (Chest)
         </label>
-        <label data-muscle="deltoids">
-            <input type="checkbox" id="cb-deltoids"> Deltoids (Shoulders)
+        <label data-muscle-name="Deltoids">
+            <input type="checkbox"> Deltoids (Shoulders)
         </label>
-        <label data-muscle="biceps">
-            <input type="checkbox" id="cb-biceps"> Biceps
+        <label data-muscle-name="Biceps">
+            <input type="checkbox"> Biceps
         </label>
-        <label data-muscle="triceps">
-            <input type="checkbox" id="cb-triceps"> Triceps
+        <label data-muscle-name="Triceps">
+            <input type="checkbox"> Triceps
         </label>
-        <label data-muscle="forearms">
-            <input type="checkbox" id="cb-forearms"> Forearms
+        <label data-muscle-name="Forearms">
+            <input type="checkbox"> Forearms
         </label>
-        <label data-muscle="abs">
-            <input type="checkbox" id="cb-abs"> Abdominals (Abs)
+        <label data-muscle-name="Abs">
+            <input type="checkbox"> Abdominals (Abs)
         </label>
-        <label data-muscle="obliques">
-            <input type="checkbox" id="cb-obliques"> Obliques (Sides)
+        <label data-muscle-name="Obliques">
+            <input type="checkbox"> Obliques (Sides)
         </label>
-        <label data-muscle="back_upper">
-            <input type="checkbox" id="cb-back_upper"> Upper Back (Traps, Rhomboids)
+        <label data-muscle-name="BackUpper">
+            <input type="checkbox"> Upper Back (Traps, Rhomboids)
         </label>
-        <label data-muscle="back_lats">
-            <input type="checkbox" id="cb-back_lats"> Lats (Mid Back)
+        <label data-muscle-name="Lats">
+            <input type="checkbox"> Lats (Mid Back)
         </label>
-        <label data-muscle="back_lower">
-            <input type="checkbox" id="cb-back_lower"> Lower Back (Erectors)
+        <label data-muscle-name="BackLower">
+            <input type="checkbox"> Lower Back (Erectors)
         </label>
-        <label data-muscle="glutes">
-            <input type="checkbox" id="cb-glutes"> Glutes
+        <label data-muscle-name="Glutes">
+            <input type="checkbox"> Glutes
         </label>
-        <label data-muscle="quads">
-            <input type="checkbox" id="cb-quads"> Quadriceps (Quads)
+        <label data-muscle-name="Quads">
+            <input type="checkbox"> Quadriceps (Quads)
         </label>
-        <label data-muscle="hamstrings">
-            <input type="checkbox" id="cb-hamstrings"> Hamstrings
+        <label data-muscle-name="Hamstrings">
+            <input type="checkbox"> Hamstrings
         </label>
-         <label data-muscle="calves">
-            <input type="checkbox" id="cb-calves"> Calves
+         <label data-muscle-name="Calves">
+            <input type="checkbox"> Calves
         </label>
-        <hr>
+
+        <div id="animation-controls">
+             <h3>Animations</h3>
+             <select id="animation-select">
+                 <option value="-1">Select Animation...</option>
+                 <!-- Options will be populated by script -->
+             </select>
+             <button id="stop-animation-btn">Stop Animation</button>
+        </div>
+
+        <hr style="margin-top: 20px;">
         <p><strong>Instructions:</strong><br>
         - Click + Drag to rotate.<br>
         - Scroll to zoom.<br>
-        - Click muscle names to cycle: Off -> Selected (Red) -> Completed (Purple) -> Off.
+        - Click muscle names to cycle: Off -> Selected (Red) -> Completed (Purple) -> Off.<br>
+        - Select an animation to play it.
         </p>
     </div>
 
@@ -108,431 +127,280 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-        let scene, camera, renderer, controls;
-        let humanGroup; // Group to hold all parts of the human
-        const muscleMeshes = {}; // Store references to muscle meshes
-        const muscleStates = {}; // Store state: 'off', 'selected', 'completed'
+        let scene, camera, renderer, controls, clock, mixer;
+        let model, animations; // To store loaded model and animations
+        const muscleMeshes = {}; // Stores references { MuscleName: [mesh1, mesh2,...] }
+        const muscleStates = {}; // Stores state: 'off', 'selected', 'completed'
+        const originalMaterials = {}; // Stores original materials { meshUUID: originalMaterial }
 
-        const colors = {
-            skin: 0xd3a18d,
-            muscleOff: 0xaaaaaa,
-            muscleSelected: 0xff0000,
-            muscleCompleted: 0x800080,
-            muscleOpacity: 0.85
-        };
+        const neonIntensity = 2.0; // How bright the glow is
 
-        const muscleMaterials = {
-            off: new THREE.MeshStandardMaterial({
-                color: colors.muscleOff, transparent: true, opacity: 0, visible: false,
-                roughness: 0.8, metalness: 0.1
-            }),
+        // Materials for highlighted states (shared instances)
+        const neonMaterials = {
             selected: new THREE.MeshStandardMaterial({
-                color: colors.muscleSelected, transparent: true, opacity: colors.muscleOpacity,
-                roughness: 0.6, metalness: 0.1, emissive: 0x330000
+                color: 0xff0000, // Base color red
+                emissive: 0xff0000, // Emissive color red
+                emissiveIntensity: neonIntensity,
+                roughness: 0.5,
+                metalness: 0.1,
+                // Add transparency if needed, but solid emissive often looks better
+                // transparent: true,
+                // opacity: 0.9
             }),
             completed: new THREE.MeshStandardMaterial({
-                color: colors.muscleCompleted, transparent: true, opacity: colors.muscleOpacity,
-                roughness: 0.6, metalness: 0.1, emissive: 0x1a001a
+                color: 0x800080, // Base color purple
+                emissive: 0x800080, // Emissive color purple
+                emissiveIntensity: neonIntensity,
+                roughness: 0.5,
+                metalness: 0.1,
             })
         };
 
         // --- Initialization ---
         function init() {
+            clock = new THREE.Clock();
             const container = document.getElementById('container');
             const canvas = document.getElementById('canvas');
+            const loadingIndicator = document.getElementById('loading-indicator');
+            loadingIndicator.style.display = 'block'; // Show loading indicator
 
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xeeeeee);
+            scene.background = new THREE.Color(0x333333); // Darker background often better for neon
+            scene.fog = new THREE.Fog(0x333333, 10, 25); // Add subtle fog
 
-            camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(0, 1.7, 6);
+            camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(0, 1.5, 5); // Adjust based on your model scale
 
             renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.shadowMap.enabled = true;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping; // Better for handling bright emissives
+            renderer.toneMappingExposure = 1.0;
 
-            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
-            dirLight.position.set(8, 15, 10);
+            // Lighting (adjust intensity based on emissive materials)
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5)); // Lower ambient
+            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8); // Lower directional
+            dirLight.position.set(5, 10, 7);
             dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 1024;
             dirLight.shadow.mapSize.height = 1024;
+             dirLight.shadow.camera.top = 5; // Adjust shadow camera bounds if needed
+             dirLight.shadow.camera.bottom = -5;
+             dirLight.shadow.camera.left = -5;
+             dirLight.shadow.camera.right = 5;
+             dirLight.shadow.camera.near = 0.1;
+             dirLight.shadow.camera.far = 50;
             scene.add(dirLight);
 
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.target.set(0, 1, 0);
-            controls.minDistance = 2;
-            controls.maxDistance = 15;
+            controls.target.set(0, 1, 0); // Adjust target based on model center
             controls.update();
 
-            // --- Create Ground Plane ---
-            const groundGeo = new THREE.PlaneGeometry(20, 20);
-            const groundMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 1, metalness: 0 });
-            const ground = new THREE.Mesh(groundGeo, groundMat);
-            ground.rotation.x = -Math.PI / 2;
-            ground.position.y = 0; // Initial position, will be adjusted in buildHumanModel
-            ground.receiveShadow = true;
-            ground.name = 'groundPlane'; // <<< --- FIX: Assign the name HERE
-            scene.add(ground);
-            // --- End Ground Plane ---
+            // Load GLB Model
+            const loader = new GLTFLoader();
+            loader.load(
+                'path/to/your/model.glb', // <<<-------------------- REPLACE THIS PATH!
+                function (gltf) {
+                    console.log("GLTF Loaded", gltf);
+                    model = gltf.scene;
+                    animations = gltf.animations;
 
+                    // --- Process Loaded Model ---
+                    model.traverse(function (object) {
+                        if (object.isMesh) {
+                            object.castShadow = true;
+                            object.receiveShadow = true; // Allow self-shadowing or ground shadows
 
-            buildHumanModel(); // Now buildHumanModel can find 'groundPlane'
-            setupUI();
+                            // --- Find Muscle Meshes by Name ---
+                            const muscleName = object.name; // Get name from Blender object
+                            const label = document.querySelector(`label[data-muscle-name="${muscleName}"]`);
+
+                            if (label) { // Check if this object name matches a muscle in our UI list
+                                if (!muscleMeshes[muscleName]) {
+                                    muscleMeshes[muscleName] = [];
+                                }
+                                muscleMeshes[muscleName].push(object);
+
+                                // Store original material & initialize state
+                                if (!originalMaterials[object.uuid]) {
+                                     originalMaterials[object.uuid] = object.material;
+                                }
+                                if (!muscleStates[muscleName]) {
+                                     muscleStates[muscleName] = 'off';
+                                }
+
+                                // Start with muscles invisible
+                                object.visible = false;
+
+                            } else if (object.name === "BodyBase") { // Or whatever you named your base body mesh
+                                // Optional: Adjust base body material if needed
+                                // object.material.roughness = 0.9;
+                            }
+                        }
+                    });
+
+                    // --- Add Model to Scene ---
+                    scene.add(model);
+
+                    // --- Setup Animation ---
+                    if (animations && animations.length) {
+                        mixer = new THREE.AnimationMixer(model);
+                        setupAnimationUI();
+                    } else {
+                        console.log("No animations found in GLB.");
+                        document.getElementById('animation-controls').style.display = 'none';
+                    }
+
+                    // --- Setup Muscle UI ---
+                    setupMuscleUI();
+
+                    // --- Adjust Camera/Controls ---
+                     fitCameraToObject(camera, model, 1.5, controls); // Frame the loaded model
+
+                    loadingIndicator.style.display = 'none'; // Hide loading indicator
+                    console.log("Model processed. Found muscles:", Object.keys(muscleMeshes));
+                    animate(); // Start animation loop ONLY after model is loaded
+                },
+                // Progress callback (optional)
+                function (xhr) {
+                    // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+                },
+                // Error callback
+                function (error) {
+                    console.error('An error happened loading the GLB:', error);
+                    loadingIndicator.textContent = 'Error Loading Model!';
+                }
+            );
+
             window.addEventListener('resize', onWindowResize);
-            animate();
+            // Don't start animate() here, wait for load callback
         }
 
-        // --- Build Model (REVISED HIERARCHY) ---
-        function buildHumanModel() {
-            humanGroup = new THREE.Group();
-            scene.add(humanGroup);
+        // --- Fit Camera Helper ---
+        function fitCameraToObject(camera, object, offset = 1.2, controls) {
+            const box = new THREE.Box3().setFromObject(object);
+            const size = box.getSize(new THREE.Vector3());
+            const center = box.getCenter(new THREE.Vector3());
 
-             // Set ground position based on lowest expected point
-             const lowestPointY = 0; // Let's place the model origin (base of torso) at Y=0 initially
-             const legLengthUpper = 0.8;
-             const legLengthLower = 0.7;
-             const torsoBaseY = lowestPointY; // Base of torso at Y=0
-             const actualLowestPoint = torsoBaseY - legLengthUpper - legLengthLower; // Approximate lowest point (feet)
+            const maxSize = Math.max(size.x, size.y, size.z);
+            const fitHeightDistance = maxSize / (2 * Math.atan(Math.PI * camera.fov / 360));
+            const fitWidthDistance = fitHeightDistance / camera.aspect;
+            const distance = offset * Math.max(fitHeightDistance, fitWidthDistance);
 
-            const groundPlane = scene.getObjectByName('groundPlane');
-            if (groundPlane) {
-                 groundPlane.position.y = actualLowestPoint - 0.01; // Place ground slightly below feet
-            }
+            const direction = controls.target.clone()
+                .sub(camera.position)
+                .normalize()
+                .multiplyScalar(distance);
 
+            controls.maxDistance = distance * 10;
+            controls.target.copy(center);
 
-            const bodyMaterial = new THREE.MeshStandardMaterial({
-                color: colors.skin,
-                roughness: 0.8,
-                metalness: 0.05
-            });
+            camera.near = distance / 100;
+            camera.far = distance * 100;
+            camera.updateProjectionMatrix();
 
-            // --- Helper Functions ---
-            function createBodyPart(geometry, material) {
-                const mesh = new THREE.Mesh(geometry, material);
-                mesh.castShadow = true;
-                return mesh;
-            }
+            camera.position.copy(controls.target).sub(direction);
 
-            function createMusclePart(geometry, muscleName) {
-                 const mesh = new THREE.Mesh(geometry, muscleMaterials.off.clone());
-                 mesh.visible = false;
-                 const key = muscleName;
-                 if (!muscleMeshes[key]) {
-                     muscleMeshes[key] = [];
-                 }
-                 muscleMeshes[key].push(mesh);
-                 return mesh;
-            }
-
-            // --- Dimensions ---
-            const torsoHeight = 1.0;
-            const torsoWidth = 0.7;
-            const torsoDepth = 0.35;
-            const shoulderOffsetY = torsoHeight / 2 - 0.1; // Y offset from torso center
-            const shoulderOffsetX = torsoWidth / 2;        // X offset for shoulder placement
-            const hipOffsetY = -torsoHeight / 2;          // Y offset for hip placement (relative to torso center)
-            const hipOffsetX = torsoWidth / 4;            // X offset for hip placement
-            // Leg lengths defined above
-            const neckHeight = 0.15;
-            const headRadius = 0.25;
-            const armLengthUpper = 0.6;
-            const armLengthLower = 0.55;
-            const muscleOffset = 0.01;
-
-            // --- Torso, Neck, Head (Base of Hierarchy) ---
-            const torsoGeo = new THREE.BoxGeometry(torsoWidth, torsoHeight, torsoDepth);
-            const torso = createBodyPart(torsoGeo, bodyMaterial);
-            // Position torso center so its base is at torsoBaseY
-            torso.position.y = torsoBaseY + torsoHeight / 2;
-            humanGroup.add(torso);
-
-            const neckGeo = new THREE.CylinderGeometry(0.1, 0.12, neckHeight, 8);
-            const neck = createBodyPart(neckGeo, bodyMaterial);
-            neck.position.y = torsoHeight / 2 + neckHeight / 2; // Local to torso center
-            torso.add(neck); // Child of torso
-
-            const headGeo = new THREE.SphereGeometry(headRadius, 12, 8);
-            const head = createBodyPart(headGeo, bodyMaterial);
-            head.position.y = neckHeight / 2 + headRadius; // Local to neck center
-            neck.add(head); // Child of neck
-
-
-            // --- Arms ---
-            const armAngleZ = Math.PI / 16; // A-Pose angle
-            const elbowAngleX = Math.PI / 12; // Elbow bend
-
-            // -- Left Arm --
-            const upperArmL = new THREE.Group(); // Group to act as shoulder joint
-            upperArmL.position.set(-shoulderOffsetX, shoulderOffsetY, 0); // Position joint relative to torso center
-            upperArmL.rotation.z = armAngleZ; // Rotate the whole arm group
-            torso.add(upperArmL);
-
-            const upperArmLGeo = new THREE.CylinderGeometry(0.1, 0.08, armLengthUpper, 8);
-            upperArmLGeo.translate(0, -armLengthUpper / 2, 0); // Pivot at the top (shoulder)
-            const upperArmLMesh = createBodyPart(upperArmLGeo, bodyMaterial);
-            upperArmL.add(upperArmLMesh); // Add mesh to the joint group
-
-            const lowerArmL = new THREE.Group(); // Group for elbow joint
-            lowerArmL.position.y = -armLengthUpper; // Position elbow at the end of upper arm (local)
-            lowerArmL.rotation.x = elbowAngleX; // Apply elbow bend locally
-            upperArmL.add(lowerArmL); // Child of upper arm group
-
-            const lowerArmLGeo = new THREE.CylinderGeometry(0.08, 0.06, armLengthLower, 8);
-            lowerArmLGeo.translate(0, -armLengthLower / 2, 0); // Pivot at the top (elbow)
-            const lowerArmLMesh = createBodyPart(lowerArmLGeo, bodyMaterial);
-            lowerArmL.add(lowerArmLMesh);
-
-            // -- Right Arm -- (Similar structure)
-            const upperArmR = new THREE.Group();
-            upperArmR.position.set(shoulderOffsetX, shoulderOffsetY, 0);
-            upperArmR.rotation.z = -armAngleZ; // Opposite rotation
-            torso.add(upperArmR);
-
-            const upperArmRGeo = new THREE.CylinderGeometry(0.1, 0.08, armLengthUpper, 8);
-            upperArmRGeo.translate(0, -armLengthUpper / 2, 0);
-            const upperArmRMesh = createBodyPart(upperArmRGeo, bodyMaterial);
-            upperArmR.add(upperArmRMesh);
-
-            const lowerArmR = new THREE.Group();
-            lowerArmR.position.y = -armLengthUpper;
-            lowerArmR.rotation.x = elbowAngleX;
-            upperArmR.add(lowerArmR);
-
-            const lowerArmRGeo = new THREE.CylinderGeometry(0.08, 0.06, armLengthLower, 8);
-            lowerArmRGeo.translate(0, -armLengthLower / 2, 0);
-            const lowerArmRMesh = createBodyPart(lowerArmRGeo, bodyMaterial);
-            lowerArmR.add(lowerArmRMesh);
-
-
-            // --- Legs ---
-            const kneeAngleX = -Math.PI / 18; // Knee bend
-
-            // -- Left Leg --
-            const upperLegL = new THREE.Group(); // Hip joint
-            upperLegL.position.set(-hipOffsetX, hipOffsetY, 0); // Position relative to torso center
-            torso.add(upperLegL);
-
-            const upperLegLGeo = new THREE.CylinderGeometry(0.15, 0.12, legLengthUpper, 8);
-            upperLegLGeo.translate(0, -legLengthUpper / 2, 0); // Pivot at the top (hip)
-            const upperLegLMesh = createBodyPart(upperLegLGeo, bodyMaterial);
-            upperLegL.add(upperLegLMesh);
-
-            const lowerLegL = new THREE.Group(); // Knee joint
-            lowerLegL.position.y = -legLengthUpper; // Position knee at end of upper leg
-            lowerLegL.rotation.x = kneeAngleX; // Apply knee bend
-            upperLegL.add(lowerLegL); // Child of upper leg group
-
-            const lowerLegLGeo = new THREE.CylinderGeometry(0.12, 0.08, legLengthLower, 8);
-            lowerLegLGeo.translate(0, -legLengthLower / 2, 0); // Pivot at the top (knee)
-            const lowerLegLMesh = createBodyPart(lowerLegLGeo, bodyMaterial);
-            lowerLegL.add(lowerLegLMesh);
-
-            // -- Right Leg -- (Similar structure)
-            const upperLegR = new THREE.Group();
-            upperLegR.position.set(hipOffsetX, hipOffsetY, 0);
-            torso.add(upperLegR);
-
-            const upperLegRGeo = new THREE.CylinderGeometry(0.15, 0.12, legLengthUpper, 8);
-            upperLegRGeo.translate(0, -legLengthUpper / 2, 0);
-            const upperLegRMesh = createBodyPart(upperLegRGeo, bodyMaterial);
-            upperLegR.add(upperLegRMesh);
-
-            const lowerLegR = new THREE.Group();
-            lowerLegR.position.y = -legLengthUpper;
-            lowerLegR.rotation.x = kneeAngleX;
-            upperLegR.add(lowerLegR);
-
-            const lowerLegRGeo = new THREE.CylinderGeometry(0.12, 0.08, legLengthLower, 8);
-            lowerLegRGeo.translate(0, -legLengthLower / 2, 0);
-            const lowerLegRMesh = createBodyPart(lowerLegRGeo, bodyMaterial);
-            lowerLegR.add(lowerLegRMesh);
-
-
-            // --- Muscle Groups (Attached to correct body part groups) ---
-
-            // Pectorals (Child of Torso)
-            const pecWidth = 0.3; const pecHeight = 0.3; const pecDepth = 0.08;
-            const pecGeo = new THREE.BoxGeometry(pecWidth, pecHeight, pecDepth);
-            const pecL = createMusclePart(pecGeo, 'pectorals');
-            pecL.position.set(-pecWidth/2 - 0.02, 0.1, torsoDepth / 2 + muscleOffset); // Local to Torso center
-            pecL.rotation.y = -Math.PI / 20;
-            torso.add(pecL);
-            const pecR = createMusclePart(pecGeo, 'pectorals');
-            pecR.position.set( pecWidth/2 + 0.02, 0.1, torsoDepth / 2 + muscleOffset); // Local to Torso center
-            pecR.rotation.y = Math.PI / 20;
-            torso.add(pecR);
-
-            // Deltoids (Child of Upper Arm Groups)
-            const deltRadius = 0.18;
-            const deltGeo = new THREE.SphereGeometry(deltRadius, 8, 6, 0, Math.PI * 2, 0, Math.PI / 1.8);
-            const deltL = createMusclePart(deltGeo, 'deltoids');
-            deltL.position.set(0, 0.05, 0); // Local to shoulder joint (upperArmL group origin)
-            upperArmL.add(deltL);
-            const deltR = createMusclePart(deltGeo.clone().rotateY(Math.PI), 'deltoids');
-            deltR.position.set(0, 0.05, 0); // Local to shoulder joint (upperArmR group origin)
-            upperArmR.add(deltR);
-
-            // Biceps (Child of Upper Arm Groups)
-            const bicepGeo = new THREE.CapsuleGeometry(0.06, 0.2, 4, 8);
-            const bicepL = createMusclePart(bicepGeo, 'biceps');
-            bicepL.position.set(0, -armLengthUpper*0.4, 0.08); // Position relative to shoulder joint, slightly forward
-            bicepL.rotation.x = Math.PI / 2; // Orient capsule
-            upperArmL.add(bicepL);
-            const bicepR = createMusclePart(bicepGeo, 'biceps');
-            bicepR.position.set(0, -armLengthUpper*0.4, 0.08);
-            bicepR.rotation.x = Math.PI / 2;
-            upperArmR.add(bicepR);
-
-            // Triceps (Child of Upper Arm Groups)
-            const tricepGeo = new THREE.CapsuleGeometry(0.07, 0.25, 4, 8);
-            const tricepL = createMusclePart(tricepGeo, 'triceps');
-            tricepL.position.set(0, -armLengthUpper*0.45, -0.08); // Position relative to shoulder, slightly back
-            tricepL.rotation.x = Math.PI / 2;
-            upperArmL.add(tricepL);
-            const tricepR = createMusclePart(tricepGeo, 'triceps');
-            tricepR.position.set(0, -armLengthUpper*0.45, -0.08);
-            tricepR.rotation.x = Math.PI / 2;
-            upperArmR.add(tricepR);
-
-            // Forearms (Child of Lower Arm Groups)
-            const forearmGeo = new THREE.CapsuleGeometry(0.07, 0.3, 4, 8);
-            const forearmL = createMusclePart(forearmGeo, 'forearms');
-            forearmL.position.set(0, -armLengthLower*0.3, 0.04); // Position relative to elbow joint
-            forearmL.rotation.x = Math.PI / 2; // Orient capsule
-            lowerArmL.add(forearmL);
-            const forearmR = createMusclePart(forearmGeo, 'forearms');
-            forearmR.position.set(0, -armLengthLower*0.3, 0.04);
-            forearmR.rotation.x = Math.PI / 2;
-            lowerArmR.add(forearmR);
-
-            // Abdominals (Child of Torso)
-            const absWidth = 0.35; const absHeight = 0.45; const absDepth = 0.08;
-            const absGeo = new THREE.BoxGeometry(absWidth, absHeight, absDepth);
-            const abs = createMusclePart(absGeo, 'abs');
-            abs.position.set(0, -0.1, torsoDepth / 2 + muscleOffset); // Local to torso center
-            torso.add(abs);
-
-            // Obliques (Child of Torso)
-            const obqWidth = 0.1; const obqHeight = 0.4; const obqDepth = 0.25;
-            const obqGeo = new THREE.BoxGeometry(obqWidth, obqHeight, obqDepth);
-            const obqL = createMusclePart(obqGeo, 'obliques');
-            obqL.position.set(-(torsoWidth/2 - 0.02), -0.1, 0); // Local to torso center, at the side
-            torso.add(obqL);
-            const obqR = createMusclePart(obqGeo, 'obliques');
-            obqR.position.set( (torsoWidth/2 - 0.02), -0.1, 0);
-            torso.add(obqR);
-
-            // Back - Upper (Traps) (Child of Torso)
-            const trapWidth = 0.4; const trapHeight = 0.4; const trapDepth = 0.1;
-            const trapGeo = new THREE.BoxGeometry(trapWidth, trapHeight, trapDepth);
-            const backUpper = createMusclePart(trapGeo, 'back_upper');
-            backUpper.position.set(0, shoulderOffsetY - trapHeight/2, -torsoDepth / 2 - muscleOffset); // Local to torso
-            torso.add(backUpper);
-
-            // Back - Lats (Child of Torso)
-            const latWidth = 0.25; const latHeight = 0.5; const latDepth = 0.1;
-            const latGeo = new THREE.BoxGeometry(latWidth, latHeight, latDepth);
-            const latL = createMusclePart(latGeo, 'back_lats');
-            latL.position.set(-(torsoWidth/2 - latWidth/2 + 0.05), -0.1, -torsoDepth / 2 - muscleOffset * 2); // Local to torso
-            latL.rotation.y = Math.PI/12;
-            torso.add(latL);
-            const latR = createMusclePart(latGeo, 'back_lats');
-            latR.position.set( (torsoWidth/2 - latWidth/2 + 0.05), -0.1, -torsoDepth / 2 - muscleOffset * 2);
-            latR.rotation.y = -Math.PI/12;
-            torso.add(latR);
-
-            // Back - Lower (Erectors) (Child of Torso)
-            const lowBackWidth = 0.2; const lowBackHeight = 0.3; const lowBackDepth = 0.08;
-            const backLowerGeo = new THREE.BoxGeometry(lowBackWidth, lowBackHeight, lowBackDepth);
-            const backLower = createMusclePart(backLowerGeo, 'back_lower');
-            backLower.position.set(0, hipOffsetY + lowBackHeight/2 + 0.1, -torsoDepth / 2 - muscleOffset); // Local to torso
-            torso.add(backLower);
-
-            // Glutes (Child of Upper Leg Groups)
-            const gluteRadius = 0.2;
-            const gluteGeo = new THREE.SphereGeometry(gluteRadius, 8, 6);
-            gluteGeo.scale(1, 1, 0.8);
-            const gluteL = createMusclePart(gluteGeo, 'glutes');
-            gluteL.position.set(0, -0.05, -0.1); // Local to hip joint
-            upperLegL.add(gluteL);
-            const gluteR = createMusclePart(gluteGeo, 'glutes');
-            gluteR.position.set(0, -0.05, -0.1);
-            upperLegR.add(gluteR);
-
-            // Quads (Child of Upper Leg Groups)
-            const quadGeo = new THREE.CapsuleGeometry(0.12, 0.5, 4, 8);
-            const quadL = createMusclePart(quadGeo, 'quads');
-            quadL.position.set(0, -legLengthUpper*0.4, 0.1); // Local to hip joint, slightly forward
-            quadL.rotation.x = Math.PI / 2;
-            upperLegL.add(quadL);
-            const quadR = createMusclePart(quadGeo, 'quads');
-            quadR.position.set(0, -legLengthUpper*0.4, 0.1);
-            quadR.rotation.x = Math.PI / 2;
-            upperLegR.add(quadR);
-
-            // Hamstrings (Child of Upper Leg Groups)
-            const hamGeo = new THREE.CapsuleGeometry(0.1, 0.45, 4, 8);
-            const hamL = createMusclePart(hamGeo, 'hamstrings');
-            hamL.position.set(0, -legLengthUpper*0.45, -0.12); // Local to hip joint, slightly back
-            hamL.rotation.x = Math.PI / 2;
-            upperLegL.add(hamL);
-            const hamR = createMusclePart(hamGeo, 'hamstrings');
-            hamR.position.set(0, -legLengthUpper*0.45, -0.12);
-            hamR.rotation.x = Math.PI / 2;
-            upperLegR.add(hamR);
-
-            // Calves (Child of Lower Leg Groups)
-            const calfGeo = new THREE.CapsuleGeometry(0.09, 0.35, 4, 8);
-            const calfL = createMusclePart(calfGeo, 'calves');
-            calfL.position.set(0, -legLengthLower*0.4, -0.08); // Local to KNEE joint, slightly back
-            calfL.rotation.x = Math.PI / 2;
-            lowerLegL.add(calfL);
-            const calfR = createMusclePart(calfGeo, 'calves');
-            calfR.position.set(0, -legLengthLower*0.4, -0.08);
-            calfR.rotation.x = Math.PI / 2;
-            lowerLegR.add(calfR);
-
-
-            // Initialize states
-            Object.keys(muscleMeshes).forEach(key => {
-                muscleStates[key] = 'off';
-            });
-
-             // Adjust camera target and OrbitControls target to new model center
-             const modelCenterY = torso.position.y; // Target the torso center
-             camera.lookAt(0, modelCenterY, 0);
-             controls.target.set(0, modelCenterY, 0);
-             controls.update();
+            controls.update();
         }
 
-        // --- UI Interaction ---
-        function setupUI() {
-            const labels = document.querySelectorAll('#controls label');
+
+        // --- UI Setup ---
+        function setupMuscleUI() {
+            const labels = document.querySelectorAll('#controls label[data-muscle-name]');
             labels.forEach(label => {
-                const muscleName = label.dataset.muscle;
-                if (muscleName) {
+                const muscleName = label.dataset.muscleName;
+                // Only process labels for muscles actually found in the model
+                if (muscleMeshes[muscleName]) {
                     if (!muscleStates[muscleName]) {
                          muscleStates[muscleName] = 'off';
                     }
-                    updateLabelAppearance(label, muscleStates[muscleName]);
+                    updateLabelAppearance(label, muscleStates[muscleName]); // Set initial style
 
                     label.addEventListener('click', (event) => {
                         event.preventDefault();
                         event.stopPropagation();
                         handleMuscleClick(muscleName, label);
                     });
+                } else {
+                    // Optional: Disable or hide labels for muscles not found in GLB
+                    label.style.display = 'none';
+                    // label.style.opacity = '0.5';
+                    // label.style.pointerEvents = 'none';
+                    // label.title = "Muscle not found in model";
                 }
             });
-             // No longer need to manipulate ground plane name here
+        }
+
+        function setupAnimationUI() {
+            const select = document.getElementById('animation-select');
+            const stopBtn = document.getElementById('stop-animation-btn');
+            select.innerHTML = '<option value="-1">Select Animation...</option>'; // Clear previous
+
+            animations.forEach((clip, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = clip.name; // Use animation name from Blender
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', (event) => {
+                const index = parseInt(event.target.value, 10);
+                playAnimation(index);
+            });
+
+            stopBtn.addEventListener('click', () => {
+                stopAllAnimations();
+                select.value = "-1"; // Reset dropdown
+            });
+        }
+
+        // --- Animation Control ---
+        let currentAction = null;
+
+        function playAnimation(index) {
+            if (!mixer || index < 0 || index >= animations.length) {
+                 stopAllAnimations(); // Stop if invalid index selected
+                return;
+            }
+
+            const clip = animations[index];
+            const action = mixer.clipAction(clip);
+
+            if (currentAction && currentAction !== action) {
+                // Fade out the previous action and fade in the new one
+                currentAction.fadeOut(0.3);
+                 action.reset().fadeIn(0.3).play();
+            } else if (!currentAction) {
+                 // Just play the first action
+                action.reset().fadeIn(0.3).play();
+            }
+             // If currentAction === action, it's already playing, do nothing? Or reset?
+             // For simplicity, we'll let it continue if it's the same.
+
+            currentAction = action;
+        }
+
+        function stopAllAnimations() {
+             if (mixer) {
+                 // mixer.stopAllAction(); // Instant stop
+                 // Fade out nicely
+                if (currentAction) {
+                    currentAction.fadeOut(0.3);
+                }
+                currentAction = null;
+             }
         }
 
 
+        // --- Muscle Interaction ---
         function handleMuscleClick(muscleName, labelElement) {
+            if (!muscleMeshes[muscleName]) return; // Safety check
+
             const currentState = muscleStates[muscleName];
             let nextState;
 
@@ -554,23 +422,40 @@
             if (!meshes) return;
 
             const state = muscleStates[muscleName];
-            let targetMaterial;
+            let targetMaterial = null;
             let visible = true;
 
             switch (state) {
-                case 'selected': targetMaterial = muscleMaterials.selected; break;
-                case 'completed': targetMaterial = muscleMaterials.completed; break;
-                case 'off': default: targetMaterial = muscleMaterials.off; visible = false; break;
+                case 'selected':
+                    targetMaterial = neonMaterials.selected;
+                    break;
+                case 'completed':
+                    targetMaterial = neonMaterials.completed;
+                    break;
+                case 'off':
+                default:
+                    visible = false;
+                    // Target material will be the original (handled below)
+                    break;
             }
 
             meshes.forEach(mesh => {
-                 // Optimization: only change material if it's actually different and mesh is visible
-                 if (mesh.visible === true && mesh.material !== targetMaterial && state !== 'off') {
-                     mesh.material = targetMaterial;
-                 } else if (visible && state !== 'off') { // Ensure correct material if becoming visible
-                     mesh.material = targetMaterial;
-                 }
-                 mesh.visible = visible;
+                if (!visible) {
+                    mesh.visible = false;
+                    // Restore original material when hiding
+                    if (originalMaterials[mesh.uuid]) {
+                        mesh.material = originalMaterials[mesh.uuid];
+                    } else {
+                         console.warn(`Original material not found for mesh UUID: ${mesh.uuid}`);
+                    }
+                } else {
+                    mesh.visible = true;
+                    if (targetMaterial) {
+                        mesh.material = targetMaterial;
+                    }
+                     // Note: If state is 'off' but somehow visible is true, this might show wrong material.
+                     // The logic relies on visible=false for the 'off' state.
+                }
             });
         }
 
@@ -589,7 +474,7 @@
                 case 'completed':
                     labelElement.classList.add('state-completed');
                     checkbox.checked = true;
-                    checkbox.indeterminate = true; // Use indeterminate visually for 'completed'
+                    checkbox.indeterminate = true;
                     break;
                 case 'off':
                 default:
@@ -615,13 +500,21 @@
 
         // --- Animation Loop ---
         function animate() {
-            requestAnimationFrame(animate);
-            controls.update();
+            requestAnimationFrame(animate); // Loop even before model loads? Maybe not ideal. Moved call into loader success.
+
+            const delta = clock.getDelta();
+
+            controls.update(); // Update orbit controls
+
+            if (mixer) {
+                mixer.update(delta); // Update animation mixer
+            }
+
             renderer.render(scene, camera);
         }
 
         // --- Start ---
-        init();
+        init(); // Start the loading process
 
     </script>
 </body>
