@@ -35,7 +35,7 @@
          .state-off { color: #555; background-color: #f9f9f9; }
          .state-off:hover { background-color: #eee; }
          .state-selected { color: red; font-weight: bold; background-color: #ffe0e0; }
-         .state-completed { color: purple; font-weight: bold; text-decoration: line-through; background-color: #f0e0f0; }
+         .state-completed { color: purple; font-weight: bold; /*text-decoration: line-through;*/ background-color: #f0e0f0; } /* Removed strikethrough for better indeterminate look */
 
     </style>
 </head>
@@ -63,7 +63,7 @@
         <label data-muscle="abs">
             <input type="checkbox" id="cb-abs"> Abdominals (Abs)
         </label>
-        <label data-muscle="obliques"> {/* Added Obliques */}
+        <label data-muscle="obliques">
             <input type="checkbox" id="cb-obliques"> Obliques (Sides)
         </label>
         <label data-muscle="back_upper">
@@ -108,8 +108,6 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        // Optional: For more complex shapes later if needed
-        // import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
         let scene, camera, renderer, controls;
         let humanGroup; // Group to hold all parts of the human
@@ -117,38 +115,25 @@
         const muscleStates = {}; // Store state: 'off', 'selected', 'completed'
 
         const colors = {
-            skin: 0xd3a18d, // A basic skin-like color
-            muscleOff: 0xaaaaaa, // Default grey when not active (actually hidden now)
-            muscleSelected: 0xff0000, // Red
-            muscleCompleted: 0x800080, // Purple
-            muscleOpacity: 0.85 // Slightly more opaque
+            skin: 0xd3a18d,
+            muscleOff: 0xaaaaaa,
+            muscleSelected: 0xff0000,
+            muscleCompleted: 0x800080,
+            muscleOpacity: 0.85
         };
 
-        // Re-use materials for performance
         const muscleMaterials = {
-            off: new THREE.MeshStandardMaterial({ // Used internally, but meshes set invisible
-                color: colors.muscleOff,
-                transparent: true,
-                opacity: 0, // Start fully transparent
-                visible: false, // Start invisible
-                roughness: 0.8,
-                metalness: 0.1
+            off: new THREE.MeshStandardMaterial({
+                color: colors.muscleOff, transparent: true, opacity: 0, visible: false,
+                roughness: 0.8, metalness: 0.1
             }),
             selected: new THREE.MeshStandardMaterial({
-                color: colors.muscleSelected,
-                transparent: true,
-                opacity: colors.muscleOpacity,
-                roughness: 0.6,
-                metalness: 0.1,
-                emissive: 0x330000 // Slight glow for red
+                color: colors.muscleSelected, transparent: true, opacity: colors.muscleOpacity,
+                roughness: 0.6, metalness: 0.1, emissive: 0x330000
             }),
             completed: new THREE.MeshStandardMaterial({
-                color: colors.muscleCompleted,
-                transparent: true,
-                opacity: colors.muscleOpacity,
-                roughness: 0.6,
-                metalness: 0.1,
-                emissive: 0x1a001a // Slight glow for purple
+                color: colors.muscleCompleted, transparent: true, opacity: colors.muscleOpacity,
+                roughness: 0.6, metalness: 0.1, emissive: 0x1a001a
             })
         };
 
@@ -157,336 +142,356 @@
             const container = document.getElementById('container');
             const canvas = document.getElementById('canvas');
 
-            // Scene
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0xeeeeee); // Lighter background
+            scene.background = new THREE.Color(0xeeeeee);
 
-            // Camera
             camera = new THREE.PerspectiveCamera(50, container.clientWidth / container.clientHeight, 0.1, 1000);
-            camera.position.set(0, 1.7, 6); // Adjusted initial camera
+            camera.position.set(0, 1.7, 6);
 
-            // Renderer
             renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
             renderer.setSize(container.clientWidth, container.clientHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
-            renderer.shadowMap.enabled = true; // Enable shadows for depth
+            renderer.shadowMap.enabled = true;
 
-            // Lighting
-            scene.add(new THREE.AmbientLight(0xffffff, 0.6)); // Softer ambient
-            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2); // Stronger directional
+            scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
             dirLight.position.set(8, 15, 10);
             dirLight.castShadow = true;
             dirLight.shadow.mapSize.width = 1024;
             dirLight.shadow.mapSize.height = 1024;
             scene.add(dirLight);
 
-            // Controls
             controls = new OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.target.set(0, 1, 0); // Target the center of the model
-            controls.minDistance = 2; // Prevent zooming too close
-            controls.maxDistance = 15; // Prevent zooming too far
+            controls.target.set(0, 1, 0);
+            controls.minDistance = 2;
+            controls.maxDistance = 15;
             controls.update();
 
-            // Ground Plane (optional, for shadow)
             const groundGeo = new THREE.PlaneGeometry(20, 20);
             const groundMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 1, metalness: 0 });
             const ground = new THREE.Mesh(groundGeo, groundMat);
             ground.rotation.x = -Math.PI / 2;
-            ground.position.y = -0.8; // Adjust based on model's lowest point
+            ground.position.y = 0; // Adjust ground based on final model base
             ground.receiveShadow = true;
             scene.add(ground);
 
-            // Build Model
             buildHumanModel();
-
-            // Setup UI Listeners
             setupUI();
-
-            // Handle Window Resize
             window.addEventListener('resize', onWindowResize);
-
-            // Start Animation Loop
             animate();
         }
 
-        // --- Build Model (REFINED) ---
+        // --- Build Model (REVISED HIERARCHY) ---
         function buildHumanModel() {
             humanGroup = new THREE.Group();
             scene.add(humanGroup);
 
+             // Set ground position based on lowest expected point (e.g., bottom of lower leg)
+             const lowestPointY = -0.7; // Approximate based on leg lengths below
+             scene.getObjectByName('groundPlane').position.y = lowestPointY;
+
+
             const bodyMaterial = new THREE.MeshStandardMaterial({
                 color: colors.skin,
-                roughness: 0.8, // Slightly less rough
+                roughness: 0.8,
                 metalness: 0.05
             });
 
-             // Function to create body parts that cast shadows
-            function createBodyPart(geometry, material, position, rotation = null) {
+            // --- Helper Functions ---
+            function createBodyPart(geometry, material) {
                 const mesh = new THREE.Mesh(geometry, material);
-                mesh.position.copy(position);
-                if (rotation) {
-                    mesh.rotation.copy(rotation);
-                }
-                mesh.castShadow = true; // Body parts cast shadows
-                humanGroup.add(mesh);
+                mesh.castShadow = true;
                 return mesh;
             }
-             // Function to create muscle parts
-            function createMusclePart(geometry, muscleName, side = null) {
-                 const mesh = new THREE.Mesh(geometry, muscleMaterials.off.clone()); // Start with 'off' material
-                 mesh.visible = false; // Start invisible
-                 // Muscles generally shouldn't cast shadows themselves to avoid visual noise
-                 // mesh.castShadow = true;
-                 humanGroup.add(mesh);
 
+            function createMusclePart(geometry, muscleName) {
+                 const mesh = new THREE.Mesh(geometry, muscleMaterials.off.clone());
+                 mesh.visible = false;
                  const key = muscleName;
                  if (!muscleMeshes[key]) {
                      muscleMeshes[key] = [];
                  }
                  muscleMeshes[key].push(mesh);
-                 return mesh; // Return for positioning
+                 return mesh;
             }
 
+            // --- Dimensions ---
             const torsoHeight = 1.0;
             const torsoWidth = 0.7;
             const torsoDepth = 0.35;
-            const shoulderWidth = 0.45; // Half width from center to shoulder joint
+            const shoulderOffsetY = torsoHeight / 2 - 0.1; // Y offset from torso center
+            const shoulderOffsetX = torsoWidth / 2;        // X offset for shoulder placement
+            const hipOffsetY = -torsoHeight / 2;          // Y offset for hip placement
+            const hipOffsetX = torsoWidth / 4;            // X offset for hip placement
             const armLengthUpper = 0.6;
             const armLengthLower = 0.55;
             const legLengthUpper = 0.8;
             const legLengthLower = 0.7;
             const neckHeight = 0.15;
             const headRadius = 0.25;
+            const muscleOffset = 0.01;
 
-            const legOffsetY = - (legLengthLower / 2 + legLengthUpper / 2 + 0.05); // Base Y position for legs
-
-
-            // --- Base Body Parts (Refined Proportions & Pose) ---
-            const torsoPos = new THREE.Vector3(0, legOffsetY + legLengthLower + legLengthUpper + torsoHeight / 2, 0);
+            // --- Torso, Neck, Head (Base of Hierarchy) ---
             const torsoGeo = new THREE.BoxGeometry(torsoWidth, torsoHeight, torsoDepth);
-            createBodyPart(torsoGeo, bodyMaterial, torsoPos);
+            const torso = createBodyPart(torsoGeo, bodyMaterial);
+            torso.position.y = legLengthUpper + legLengthLower + torsoHeight / 2 + lowestPointY; // Position torso relative to ground
+            humanGroup.add(torso);
 
-            const neckPos = new THREE.Vector3(0, torsoPos.y + torsoHeight / 2 + neckHeight / 2, 0);
             const neckGeo = new THREE.CylinderGeometry(0.1, 0.12, neckHeight, 8);
-            createBodyPart(neckGeo, bodyMaterial, neckPos);
+            const neck = createBodyPart(neckGeo, bodyMaterial);
+            neck.position.y = torsoHeight / 2 + neckHeight / 2; // Local to torso center
+            torso.add(neck); // Child of torso
 
-            const headPos = new THREE.Vector3(0, neckPos.y + neckHeight / 2 + headRadius, 0);
             const headGeo = new THREE.SphereGeometry(headRadius, 12, 8);
-            createBodyPart(headGeo, bodyMaterial, headPos);
+            const head = createBodyPart(headGeo, bodyMaterial);
+            head.position.y = neckHeight / 2 + headRadius; // Local to neck center
+            neck.add(head); // Child of neck
 
-            // Arms (Slight A-Pose and elbow bend)
-            const armAngleZ = Math.PI / 16; // Slight angle down
-            const elbowAngleX = Math.PI / 12; // Slight bend forward
 
-            // Left Arm
-            const upperArmLPos = new THREE.Vector3(-shoulderWidth, torsoPos.y + torsoHeight/2 - 0.1, 0);
+            // --- Arms ---
+            const armAngleZ = Math.PI / 16; // A-Pose angle
+            const elbowAngleX = Math.PI / 12; // Elbow bend
+
+            // -- Left Arm --
+            const upperArmL = new THREE.Group(); // Group to act as shoulder joint
+            upperArmL.position.set(-shoulderOffsetX, shoulderOffsetY, 0); // Position joint relative to torso center
+            upperArmL.rotation.z = armAngleZ; // Rotate the whole arm group
+            torso.add(upperArmL);
+
             const upperArmLGeo = new THREE.CylinderGeometry(0.1, 0.08, armLengthUpper, 8);
-            const upperArmL = createBodyPart(upperArmLGeo, bodyMaterial, upperArmLPos);
-            upperArmL.geometry.translate(0, -armLengthUpper/2, 0); // Pivot from shoulder
-            upperArmL.rotation.z = armAngleZ;
+            upperArmLGeo.translate(0, -armLengthUpper / 2, 0); // Pivot at the top (shoulder)
+            const upperArmLMesh = createBodyPart(upperArmLGeo, bodyMaterial);
+            upperArmL.add(upperArmLMesh); // Add mesh to the joint group
 
-            const lowerArmLPos = new THREE.Vector3().setFromCylindricalCoords(armLengthUpper, Math.PI/2 - armAngleZ, 0).add(upperArmLPos); // Position at end of upper arm
+            const lowerArmL = new THREE.Group(); // Group for elbow joint
+            lowerArmL.position.y = -armLengthUpper; // Position elbow at the end of upper arm (local)
+            lowerArmL.rotation.x = elbowAngleX; // Apply elbow bend locally
+            upperArmL.add(lowerArmL); // Child of upper arm group
+
             const lowerArmLGeo = new THREE.CylinderGeometry(0.08, 0.06, armLengthLower, 8);
-            const lowerArmL = createBodyPart(lowerArmLGeo, bodyMaterial, lowerArmLPos);
-            lowerArmL.geometry.translate(0, -armLengthLower/2, 0); // Pivot from elbow
-            lowerArmL.rotation.z = armAngleZ;
-            lowerArmL.rotation.x = elbowAngleX; // Add elbow bend
+            lowerArmLGeo.translate(0, -armLengthLower / 2, 0); // Pivot at the top (elbow)
+            const lowerArmLMesh = createBodyPart(lowerArmLGeo, bodyMaterial);
+            lowerArmL.add(lowerArmLMesh);
 
+            // -- Right Arm -- (Similar structure)
+            const upperArmR = new THREE.Group();
+            upperArmR.position.set(shoulderOffsetX, shoulderOffsetY, 0);
+            upperArmR.rotation.z = -armAngleZ; // Opposite rotation
+            torso.add(upperArmR);
 
-            // Right Arm
-            const upperArmRPos = new THREE.Vector3(shoulderWidth, torsoPos.y + torsoHeight/2 - 0.1, 0);
             const upperArmRGeo = new THREE.CylinderGeometry(0.1, 0.08, armLengthUpper, 8);
-            const upperArmR = createBodyPart(upperArmRGeo, bodyMaterial, upperArmRPos);
-            upperArmR.geometry.translate(0, -armLengthUpper/2, 0);
-            upperArmR.rotation.z = -armAngleZ;
+            upperArmRGeo.translate(0, -armLengthUpper / 2, 0);
+            const upperArmRMesh = createBodyPart(upperArmRGeo, bodyMaterial);
+            upperArmR.add(upperArmRMesh);
 
-            const lowerArmRPos = new THREE.Vector3().setFromCylindricalCoords(armLengthUpper, Math.PI/2 + armAngleZ, 0).add(upperArmRPos);
-            const lowerArmRGeo = new THREE.CylinderGeometry(0.08, 0.06, armLengthLower, 8);
-            const lowerArmR = createBodyPart(lowerArmRGeo, bodyMaterial, lowerArmRPos);
-            lowerArmR.geometry.translate(0, -armLengthLower/2, 0);
-            lowerArmR.rotation.z = -armAngleZ;
+            const lowerArmR = new THREE.Group();
+            lowerArmR.position.y = -armLengthUpper;
             lowerArmR.rotation.x = elbowAngleX;
+            upperArmR.add(lowerArmR);
+
+            const lowerArmRGeo = new THREE.CylinderGeometry(0.08, 0.06, armLengthLower, 8);
+            lowerArmRGeo.translate(0, -armLengthLower / 2, 0);
+            const lowerArmRMesh = createBodyPart(lowerArmRGeo, bodyMaterial);
+            lowerArmR.add(lowerArmRMesh);
 
 
-            // Legs (Slight knee bend)
-            const hipWidth = 0.2;
-            const kneeAngleX = -Math.PI / 18; // Slight bend backward
+            // --- Legs ---
+            const kneeAngleX = -Math.PI / 18; // Knee bend
 
-            // Left Leg
-            const upperLegLPos = new THREE.Vector3(-hipWidth, legOffsetY + legLengthLower + legLengthUpper, 0);
+            // -- Left Leg --
+            const upperLegL = new THREE.Group(); // Hip joint
+            upperLegL.position.set(-hipOffsetX, hipOffsetY, 0); // Position relative to torso center
+            torso.add(upperLegL);
+
             const upperLegLGeo = new THREE.CylinderGeometry(0.15, 0.12, legLengthUpper, 8);
-            const upperLegL = createBodyPart(upperLegLGeo, bodyMaterial, upperLegLPos);
-            upperLegL.geometry.translate(0, -legLengthUpper/2, 0); // Pivot from hip
+            upperLegLGeo.translate(0, -legLengthUpper / 2, 0); // Pivot at the top (hip)
+            const upperLegLMesh = createBodyPart(upperLegLGeo, bodyMaterial);
+            upperLegL.add(upperLegLMesh);
 
-            const lowerLegLPos = new THREE.Vector3().setFromCylindricalCoords(legLengthUpper, -Math.PI/2, 0).add(upperLegLPos);
+            const lowerLegL = new THREE.Group(); // Knee joint
+            lowerLegL.position.y = -legLengthUpper; // Position knee at end of upper leg
+            lowerLegL.rotation.x = kneeAngleX; // Apply knee bend
+            upperLegL.add(lowerLegL); // Child of upper leg group
+
             const lowerLegLGeo = new THREE.CylinderGeometry(0.12, 0.08, legLengthLower, 8);
-            const lowerLegL = createBodyPart(lowerLegLGeo, bodyMaterial, lowerLegLPos);
-            lowerLegL.geometry.translate(0, -legLengthLower/2, 0); // Pivot from knee
-            lowerLegL.rotation.x = kneeAngleX; // Add knee bend
+            lowerLegLGeo.translate(0, -legLengthLower / 2, 0); // Pivot at the top (knee)
+            const lowerLegLMesh = createBodyPart(lowerLegLGeo, bodyMaterial);
+            lowerLegL.add(lowerLegLMesh);
 
-            // Right Leg
-            const upperLegRPos = new THREE.Vector3(hipWidth, legOffsetY + legLengthLower + legLengthUpper, 0);
+            // -- Right Leg -- (Similar structure)
+            const upperLegR = new THREE.Group();
+            upperLegR.position.set(hipOffsetX, hipOffsetY, 0);
+            torso.add(upperLegR);
+
             const upperLegRGeo = new THREE.CylinderGeometry(0.15, 0.12, legLengthUpper, 8);
-            const upperLegR = createBodyPart(upperLegRGeo, bodyMaterial, upperLegRPos);
-            upperLegR.geometry.translate(0, -legLengthUpper/2, 0);
+            upperLegRGeo.translate(0, -legLengthUpper / 2, 0);
+            const upperLegRMesh = createBodyPart(upperLegRGeo, bodyMaterial);
+            upperLegR.add(upperLegRMesh);
 
-            const lowerLegRPos = new THREE.Vector3().setFromCylindricalCoords(legLengthUpper, -Math.PI/2, 0).add(upperLegRPos);
-            const lowerLegRGeo = new THREE.CylinderGeometry(0.12, 0.08, legLengthLower, 8);
-            const lowerLegR = createBodyPart(lowerLegRGeo, bodyMaterial, lowerLegRPos);
-            lowerLegR.geometry.translate(0, -legLengthLower/2, 0);
+            const lowerLegR = new THREE.Group();
+            lowerLegR.position.y = -legLengthUpper;
             lowerLegR.rotation.x = kneeAngleX;
+            upperLegR.add(lowerLegR);
+
+            const lowerLegRGeo = new THREE.CylinderGeometry(0.12, 0.08, legLengthLower, 8);
+            lowerLegRGeo.translate(0, -legLengthLower / 2, 0);
+            const lowerLegRMesh = createBodyPart(lowerLegRGeo, bodyMaterial);
+            lowerLegR.add(lowerLegRMesh);
 
 
-            // --- Muscle Groups (Refined Shapes & Placement) ---
-            const muscleOffset = 0.01; // Minimal offset
+            // --- Muscle Groups (Attached to correct body part groups) ---
 
-            // Pectorals (Slightly shaped)
+            // Pectorals (Child of Torso)
             const pecWidth = 0.3; const pecHeight = 0.3; const pecDepth = 0.08;
             const pecGeo = new THREE.BoxGeometry(pecWidth, pecHeight, pecDepth);
             const pecL = createMusclePart(pecGeo, 'pectorals');
-            pecL.position.set(-pecWidth/2 - 0.02, torsoPos.y + 0.1, torsoDepth / 2 + muscleOffset);
-            pecL.rotation.y = -Math.PI / 20; // Slight angle
+            pecL.position.set(-pecWidth/2 - 0.02, 0.1, torsoDepth / 2 + muscleOffset); // Local to Torso center
+            pecL.rotation.y = -Math.PI / 20;
+            torso.add(pecL);
             const pecR = createMusclePart(pecGeo, 'pectorals');
-            pecR.position.set( pecWidth/2 + 0.02, torsoPos.y + 0.1, torsoDepth / 2 + muscleOffset);
-            pecR.rotation.y = Math.PI / 20; // Slight angle
+            pecR.position.set( pecWidth/2 + 0.02, 0.1, torsoDepth / 2 + muscleOffset); // Local to Torso center
+            pecR.rotation.y = Math.PI / 20;
+            torso.add(pecR);
 
-            // Deltoids (More like caps)
+            // Deltoids (Child of Upper Arm Groups)
             const deltRadius = 0.18;
-            const deltGeo = new THREE.SphereGeometry(deltRadius, 8, 6, 0, Math.PI * 2, 0, Math.PI / 1.8); // Hemisphere cap
+            const deltGeo = new THREE.SphereGeometry(deltRadius, 8, 6, 0, Math.PI * 2, 0, Math.PI / 1.8);
             const deltL = createMusclePart(deltGeo, 'deltoids');
-            deltL.position.copy(upperArmLPos).add(new THREE.Vector3(0, 0.05, 0)); // Position at shoulder joint
-            deltL.rotation.z = Math.PI / 6; // Angle with arm
-            const deltR = createMusclePart(deltGeo.clone().rotateY(Math.PI), 'deltoids'); // Clone and flip geometry
-            deltR.position.copy(upperArmRPos).add(new THREE.Vector3(0, 0.05, 0));
-            deltR.rotation.z = -Math.PI / 6;
+            deltL.position.set(0, 0.05, 0); // Local to shoulder joint (upperArmL group origin)
+            // Rotation might need minor adjustment relative to arm pivot
+            upperArmL.add(deltL); // Child of upperArmL group
+            const deltR = createMusclePart(deltGeo.clone().rotateY(Math.PI), 'deltoids');
+            deltR.position.set(0, 0.05, 0); // Local to shoulder joint (upperArmR group origin)
+            upperArmR.add(deltR); // Child of upperArmR group
 
-            // Biceps (Positioned on upper arm)
-            const bicepGeo = new THREE.CapsuleGeometry(0.06, 0.2, 4, 8); // Capsule shape
+            // Biceps (Child of Upper Arm Groups)
+            const bicepGeo = new THREE.CapsuleGeometry(0.06, 0.2, 4, 8);
             const bicepL = createMusclePart(bicepGeo, 'biceps');
-            bicepL.position.set(upperArmLPos.x, upperArmLPos.y - armLengthUpper*0.4, upperArmLPos.z + 0.05); // Place along upper arm
-            bicepL.rotation.z = armAngleZ; // Match arm angle
-            bicepL.rotation.x = Math.PI / 2; // Orient capsule along arm
+            bicepL.position.set(0, -armLengthUpper*0.4, 0.08); // Position relative to shoulder joint, slightly forward
+            bicepL.rotation.x = Math.PI / 2; // Orient capsule
+            upperArmL.add(bicepL);
             const bicepR = createMusclePart(bicepGeo, 'biceps');
-            bicepR.position.set(upperArmRPos.x, upperArmRPos.y - armLengthUpper*0.4, upperArmRPos.z + 0.05);
-            bicepR.rotation.z = -armAngleZ;
+            bicepR.position.set(0, -armLengthUpper*0.4, 0.08); // Position relative to shoulder joint
             bicepR.rotation.x = Math.PI / 2;
+            upperArmR.add(bicepR);
 
-            // Triceps (Positioned on back of upper arm)
-            const tricepGeo = new THREE.CapsuleGeometry(0.07, 0.25, 4, 8); // Slightly larger capsule
+            // Triceps (Child of Upper Arm Groups)
+            const tricepGeo = new THREE.CapsuleGeometry(0.07, 0.25, 4, 8);
             const tricepL = createMusclePart(tricepGeo, 'triceps');
-            tricepL.position.set(upperArmLPos.x, upperArmLPos.y - armLengthUpper*0.45, upperArmLPos.z - 0.05); // Place behind arm
-            tricepL.rotation.z = armAngleZ;
+            tricepL.position.set(0, -armLengthUpper*0.45, -0.08); // Position relative to shoulder, slightly back
             tricepL.rotation.x = Math.PI / 2;
+            upperArmL.add(tricepL);
             const tricepR = createMusclePart(tricepGeo, 'triceps');
-            tricepR.position.set(upperArmRPos.x, upperArmRPos.y - armLengthUpper*0.45, upperArmRPos.z - 0.05);
-            tricepR.rotation.z = -armAngleZ;
+            tricepR.position.set(0, -armLengthUpper*0.45, -0.08); // Position relative to shoulder
             tricepR.rotation.x = Math.PI / 2;
+            upperArmR.add(tricepR);
 
-            // Forearms (Bulge on lower arm)
+            // Forearms (Child of Lower Arm Groups)
             const forearmGeo = new THREE.CapsuleGeometry(0.07, 0.3, 4, 8);
             const forearmL = createMusclePart(forearmGeo, 'forearms');
-            // Position relative to lower arm's local space, then apply world rotation
-            const forearmLocalPosL = new THREE.Vector3(0, -armLengthLower*0.3, 0.02); // Along the arm, slightly top/front
-            forearmL.position.copy(forearmLocalPosL).applyEuler(lowerArmL.rotation).add(lowerArmL.position);
-            forearmL.rotation.copy(lowerArmL.rotation); // Align with lower arm
-            forearmL.rotateX(Math.PI / 2); // Orient capsule along arm length
-
+            forearmL.position.set(0, -armLengthLower*0.3, 0.04); // Position relative to elbow joint
+            forearmL.rotation.x = Math.PI / 2; // Orient capsule
+            lowerArmL.add(forearmL); // CHILD OF LOWER ARM
             const forearmR = createMusclePart(forearmGeo, 'forearms');
-            const forearmLocalPosR = new THREE.Vector3(0, -armLengthLower*0.3, 0.02);
-            forearmR.position.copy(forearmLocalPosR).applyEuler(lowerArmR.rotation).add(lowerArmR.position);
-            forearmR.rotation.copy(lowerArmR.rotation);
-            forearmR.rotateX(Math.PI / 2);
+            forearmR.position.set(0, -armLengthLower*0.3, 0.04); // Position relative to elbow joint
+            forearmR.rotation.x = Math.PI / 2;
+            lowerArmR.add(forearmR); // CHILD OF LOWER ARM
 
-            // Abdominals (Single panel, slightly curved) - Could use RoundedBox if desired
+            // Abdominals (Child of Torso)
             const absWidth = 0.35; const absHeight = 0.45; const absDepth = 0.08;
             const absGeo = new THREE.BoxGeometry(absWidth, absHeight, absDepth);
             const abs = createMusclePart(absGeo, 'abs');
-            abs.position.set(0, torsoPos.y - 0.1, torsoDepth / 2 + muscleOffset);
-            // abs.rotation.x = Math.PI / 20; // Slight curve back
+            abs.position.set(0, -0.1, torsoDepth / 2 + muscleOffset); // Local to torso center
+            torso.add(abs);
 
-            // Obliques (Side panels) - NEW
+            // Obliques (Child of Torso)
             const obqWidth = 0.1; const obqHeight = 0.4; const obqDepth = 0.25;
             const obqGeo = new THREE.BoxGeometry(obqWidth, obqHeight, obqDepth);
             const obqL = createMusclePart(obqGeo, 'obliques');
-            obqL.position.set(-(torsoWidth/2 + obqWidth/2 - 0.05), torsoPos.y - 0.1, 0);
-             obqL.rotation.y = Math.PI/10; // Angle slightly
+            obqL.position.set(-(torsoWidth/2 - 0.02), -0.1, 0); // Local to torso center, at the side
+            // obqL.rotation.y = Math.PI/10; // Less necessary now? Adjust if needed.
+            torso.add(obqL);
             const obqR = createMusclePart(obqGeo, 'obliques');
-            obqR.position.set( (torsoWidth/2 + obqWidth/2 - 0.05), torsoPos.y - 0.1, 0);
-            obqR.rotation.y = -Math.PI/10; // Angle slightly
+            obqR.position.set( (torsoWidth/2 - 0.02), -0.1, 0); // Local to torso center, at the side
+            // obqR.rotation.y = -Math.PI/10;
+            torso.add(obqR);
 
-
-            // Back - Upper (Traps - more diamond like)
+            // Back - Upper (Traps) (Child of Torso)
             const trapWidth = 0.4; const trapHeight = 0.4; const trapDepth = 0.1;
-            const trapGeo = new THREE.BoxGeometry(trapWidth, trapHeight, trapDepth); // Simple box for now
+            const trapGeo = new THREE.BoxGeometry(trapWidth, trapHeight, trapDepth);
             const backUpper = createMusclePart(trapGeo, 'back_upper');
-            backUpper.position.set(0, torsoPos.y + torsoHeight/2 - trapHeight/2 + 0.1, -torsoDepth / 2 - muscleOffset);
-            // Consider using a ShapeGeometry for a better trap shape later
+            backUpper.position.set(0, shoulderOffsetY - trapHeight/2, -torsoDepth / 2 - muscleOffset); // Local to torso
+            torso.add(backUpper);
 
-            // Back - Lats (Wider, wing-like)
+            // Back - Lats (Child of Torso)
             const latWidth = 0.25; const latHeight = 0.5; const latDepth = 0.1;
             const latGeo = new THREE.BoxGeometry(latWidth, latHeight, latDepth);
             const latL = createMusclePart(latGeo, 'back_lats');
-            latL.position.set(-(torsoWidth/2 - latWidth/2 + 0.05), torsoPos.y - 0.1, -torsoDepth / 2 - muscleOffset * 2);
-            latL.rotation.y = Math.PI/6; // Angle out slightly
+            latL.position.set(-(torsoWidth/2 - latWidth/2 + 0.05), -0.1, -torsoDepth / 2 - muscleOffset * 2); // Local to torso
+            latL.rotation.y = Math.PI/12; // Slight angle
+            torso.add(latL);
             const latR = createMusclePart(latGeo, 'back_lats');
-            latR.position.set( (torsoWidth/2 - latWidth/2 + 0.05), torsoPos.y - 0.1, -torsoDepth / 2 - muscleOffset * 2);
-             latR.rotation.y = -Math.PI/6; // Angle out slightly
+            latR.position.set( (torsoWidth/2 - latWidth/2 + 0.05), -0.1, -torsoDepth / 2 - muscleOffset * 2); // Local to torso
+            latR.rotation.y = -Math.PI/12; // Slight angle
+            torso.add(latR);
 
-            // Back - Lower (Erectors)
+            // Back - Lower (Erectors) (Child of Torso)
             const lowBackWidth = 0.2; const lowBackHeight = 0.3; const lowBackDepth = 0.08;
             const backLowerGeo = new THREE.BoxGeometry(lowBackWidth, lowBackHeight, lowBackDepth);
             const backLower = createMusclePart(backLowerGeo, 'back_lower');
-            backLower.position.set(0, torsoPos.y - torsoHeight/2 + lowBackHeight/2, -torsoDepth / 2 - muscleOffset);
+            backLower.position.set(0, hipOffsetY + lowBackHeight/2 + 0.1, -torsoDepth / 2 - muscleOffset); // Local to torso
+            torso.add(backLower);
 
-            // Glutes (Rounded)
+            // Glutes (Child of Upper Leg Groups - slightly better conceptually than torso)
             const gluteRadius = 0.2;
-            const gluteGeo = new THREE.SphereGeometry(gluteRadius, 8, 6); // Use spheres
+            const gluteGeo = new THREE.SphereGeometry(gluteRadius, 8, 6);
             gluteGeo.scale(1, 1, 0.8); // Flatten slightly
             const gluteL = createMusclePart(gluteGeo, 'glutes');
-            gluteL.position.set(-hipWidth, upperLegLPos.y - 0.05, -0.1); // Position relative to hip/leg top
+            gluteL.position.set(0, -0.05, -0.1); // Local to hip joint
+            upperLegL.add(gluteL); // CHILD OF UPPER LEG
             const gluteR = createMusclePart(gluteGeo, 'glutes');
-            gluteR.position.set( hipWidth, upperLegRPos.y - 0.05, -0.1);
+            gluteR.position.set(0, -0.05, -0.1); // Local to hip joint
+            upperLegR.add(gluteR); // CHILD OF UPPER LEG
 
-            // Quads (Front of thigh)
+            // Quads (Child of Upper Leg Groups)
             const quadGeo = new THREE.CapsuleGeometry(0.12, 0.5, 4, 8);
             const quadL = createMusclePart(quadGeo, 'quads');
-            quadL.position.set(upperLegLPos.x, upperLegLPos.y - legLengthUpper*0.4, upperLegLPos.z + 0.08); // Place along upper leg
+            quadL.position.set(0, -legLengthUpper*0.4, 0.1); // Local to hip joint, slightly forward
             quadL.rotation.x = Math.PI / 2; // Orient capsule
+            upperLegL.add(quadL); // CHILD OF UPPER LEG
             const quadR = createMusclePart(quadGeo, 'quads');
-            quadR.position.set(upperLegRPos.x, upperLegRPos.y - legLengthUpper*0.4, upperLegRPos.z + 0.08);
+            quadR.position.set(0, -legLengthUpper*0.4, 0.1); // Local to hip joint
             quadR.rotation.x = Math.PI / 2;
+            upperLegR.add(quadR); // CHILD OF UPPER LEG
 
-            // Hamstrings (Back of thigh)
+            // Hamstrings (Child of Upper Leg Groups)
             const hamGeo = new THREE.CapsuleGeometry(0.1, 0.45, 4, 8);
             const hamL = createMusclePart(hamGeo, 'hamstrings');
-            hamL.position.set(upperLegLPos.x, upperLegLPos.y - legLengthUpper*0.45, upperLegLPos.z - 0.08); // Place behind leg
+            hamL.position.set(0, -legLengthUpper*0.45, -0.12); // Local to hip joint, slightly back
             hamL.rotation.x = Math.PI / 2;
+            upperLegL.add(hamL); // CHILD OF UPPER LEG
             const hamR = createMusclePart(hamGeo, 'hamstrings');
-            hamR.position.set(upperLegRPos.x, upperLegRPos.y - legLengthUpper*0.45, upperLegRPos.z - 0.08);
+            hamR.position.set(0, -legLengthUpper*0.45, -0.12); // Local to hip joint
             hamR.rotation.x = Math.PI / 2;
+            upperLegR.add(hamR); // CHILD OF UPPER LEG
 
-            // Calves (Back of lower leg)
+            // Calves (Child of Lower Leg Groups) - THIS IS THE CRITICAL FIX
             const calfGeo = new THREE.CapsuleGeometry(0.09, 0.35, 4, 8);
             const calfL = createMusclePart(calfGeo, 'calves');
-            // Position relative to lower leg's local space
-            const calfLocalPosL = new THREE.Vector3(0, -legLengthLower*0.4, -0.06); // Along the leg, back side
-            calfL.position.copy(calfLocalPosL).applyEuler(lowerLegL.rotation).add(lowerLegL.position);
-            calfL.rotation.copy(lowerLegL.rotation); // Align with lower leg
-            calfL.rotateX(Math.PI / 2); // Orient capsule along leg length
-
+            calfL.position.set(0, -legLengthLower*0.4, -0.08); // Local to KNEE joint, slightly back
+            calfL.rotation.x = Math.PI / 2; // Orient capsule
+            lowerLegL.add(calfL); // CHILD OF LOWER LEG GROUP
             const calfR = createMusclePart(calfGeo, 'calves');
-            const calfLocalPosR = new THREE.Vector3(0, -legLengthLower*0.4, -0.06);
-            calfR.position.copy(calfLocalPosR).applyEuler(lowerLegR.rotation).add(lowerLegR.position);
-            calfR.rotation.copy(lowerLegR.rotation);
-            calfR.rotateX(Math.PI / 2);
+            calfR.position.set(0, -legLengthLower*0.4, -0.08); // Local to KNEE joint
+            calfR.rotation.x = Math.PI / 2;
+            lowerLegR.add(calfR); // CHILD OF LOWER LEG GROUP
 
 
-            // Initialize all muscle states to 'off'
+            // Initialize states
             Object.keys(muscleMeshes).forEach(key => {
                 muscleStates[key] = 'off';
-                // Appearance is handled by visibility flag now
             });
         }
 
@@ -496,20 +501,21 @@
             labels.forEach(label => {
                 const muscleName = label.dataset.muscle;
                 if (muscleName) {
-                    // Ensure initial state matches muscleStates (all 'off')
                     if (!muscleStates[muscleName]) {
                          muscleStates[muscleName] = 'off';
                     }
-                    updateLabelAppearance(label, muscleStates[muscleName]); // Set initial class/check state
+                    updateLabelAppearance(label, muscleStates[muscleName]);
 
                     label.addEventListener('click', (event) => {
-                        // We manage state, prevent default label behavior (like checkbox toggle)
                         event.preventDefault();
-                        event.stopPropagation(); // Prevent potential bubbling issues
+                        event.stopPropagation();
                         handleMuscleClick(muscleName, label);
                     });
                 }
             });
+
+             // Add name attribute to ground plane for easier access
+             scene.getObjectByName('groundPlane').name = 'groundPlane';
         }
 
 
@@ -539,34 +545,23 @@
             let visible = true;
 
             switch (state) {
-                case 'selected':
-                    targetMaterial = muscleMaterials.selected;
-                    break;
-                case 'completed':
-                    targetMaterial = muscleMaterials.completed;
-                    break;
-                case 'off':
-                default:
-                    // Keep material reference but make invisible
-                    targetMaterial = muscleMaterials.off; // Doesn't really matter which one if invisible
-                    visible = false;
-                    break;
+                case 'selected': targetMaterial = muscleMaterials.selected; break;
+                case 'completed': targetMaterial = muscleMaterials.completed; break;
+                case 'off': default: targetMaterial = muscleMaterials.off; visible = false; break;
             }
 
             meshes.forEach(mesh => {
-                // Only update material if it needs changing (slight optimization)
-                if (mesh.material !== targetMaterial && state !== 'off') {
+                 if (mesh.material !== targetMaterial && state !== 'off') {
                      mesh.material = targetMaterial;
-                }
+                 }
                  mesh.visible = visible;
             });
         }
 
          function updateLabelAppearance(labelElement, state) {
              const checkbox = labelElement.querySelector('input[type="checkbox"]');
-             if (!checkbox) return; // Guard against missing checkbox
+             if (!checkbox) return;
 
-             // Remove existing state classes
              labelElement.classList.remove('state-off', 'state-selected', 'state-completed');
 
              switch (state) {
@@ -577,8 +572,8 @@
                     break;
                 case 'completed':
                     labelElement.classList.add('state-completed');
-                    checkbox.checked = true; // Visually checked
-                    checkbox.indeterminate = true; // Use indeterminate visually for 'completed' state
+                    checkbox.checked = true;
+                    checkbox.indeterminate = true; // Use indeterminate visually for 'completed'
                     break;
                 case 'off':
                 default:
@@ -592,11 +587,10 @@
         // --- Window Resize ---
         function onWindowResize() {
             const container = document.getElementById('container');
-            if (!container) return; // Check if container exists
+            if (!container) return;
             const width = container.clientWidth;
             const height = container.clientHeight;
-
-             if (width === 0 || height === 0) return; // Avoid issues if container is hidden
+             if (width === 0 || height === 0) return;
 
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
@@ -606,7 +600,7 @@
         // --- Animation Loop ---
         function animate() {
             requestAnimationFrame(animate);
-            controls.update(); // Required for damping
+            controls.update();
             renderer.render(scene, camera);
         }
 
