@@ -169,15 +169,19 @@
             controls.maxDistance = 15;
             controls.update();
 
+            // --- Create Ground Plane ---
             const groundGeo = new THREE.PlaneGeometry(20, 20);
             const groundMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, roughness: 1, metalness: 0 });
             const ground = new THREE.Mesh(groundGeo, groundMat);
             ground.rotation.x = -Math.PI / 2;
-            ground.position.y = 0; // Adjust ground based on final model base
+            ground.position.y = 0; // Initial position, will be adjusted in buildHumanModel
             ground.receiveShadow = true;
+            ground.name = 'groundPlane'; // <<< --- FIX: Assign the name HERE
             scene.add(ground);
+            // --- End Ground Plane ---
 
-            buildHumanModel();
+
+            buildHumanModel(); // Now buildHumanModel can find 'groundPlane'
             setupUI();
             window.addEventListener('resize', onWindowResize);
             animate();
@@ -188,9 +192,17 @@
             humanGroup = new THREE.Group();
             scene.add(humanGroup);
 
-             // Set ground position based on lowest expected point (e.g., bottom of lower leg)
-             const lowestPointY = -0.7; // Approximate based on leg lengths below
-             scene.getObjectByName('groundPlane').position.y = lowestPointY;
+             // Set ground position based on lowest expected point
+             const lowestPointY = 0; // Let's place the model origin (base of torso) at Y=0 initially
+             const legLengthUpper = 0.8;
+             const legLengthLower = 0.7;
+             const torsoBaseY = lowestPointY; // Base of torso at Y=0
+             const actualLowestPoint = torsoBaseY - legLengthUpper - legLengthLower; // Approximate lowest point (feet)
+
+            const groundPlane = scene.getObjectByName('groundPlane');
+            if (groundPlane) {
+                 groundPlane.position.y = actualLowestPoint - 0.01; // Place ground slightly below feet
+            }
 
 
             const bodyMaterial = new THREE.MeshStandardMaterial({
@@ -223,20 +235,20 @@
             const torsoDepth = 0.35;
             const shoulderOffsetY = torsoHeight / 2 - 0.1; // Y offset from torso center
             const shoulderOffsetX = torsoWidth / 2;        // X offset for shoulder placement
-            const hipOffsetY = -torsoHeight / 2;          // Y offset for hip placement
+            const hipOffsetY = -torsoHeight / 2;          // Y offset for hip placement (relative to torso center)
             const hipOffsetX = torsoWidth / 4;            // X offset for hip placement
-            const armLengthUpper = 0.6;
-            const armLengthLower = 0.55;
-            const legLengthUpper = 0.8;
-            const legLengthLower = 0.7;
+            // Leg lengths defined above
             const neckHeight = 0.15;
             const headRadius = 0.25;
+            const armLengthUpper = 0.6;
+            const armLengthLower = 0.55;
             const muscleOffset = 0.01;
 
             // --- Torso, Neck, Head (Base of Hierarchy) ---
             const torsoGeo = new THREE.BoxGeometry(torsoWidth, torsoHeight, torsoDepth);
             const torso = createBodyPart(torsoGeo, bodyMaterial);
-            torso.position.y = legLengthUpper + legLengthLower + torsoHeight / 2 + lowestPointY; // Position torso relative to ground
+            // Position torso center so its base is at torsoBaseY
+            torso.position.y = torsoBaseY + torsoHeight / 2;
             humanGroup.add(torso);
 
             const neckGeo = new THREE.CylinderGeometry(0.1, 0.12, neckHeight, 8);
@@ -360,11 +372,10 @@
             const deltGeo = new THREE.SphereGeometry(deltRadius, 8, 6, 0, Math.PI * 2, 0, Math.PI / 1.8);
             const deltL = createMusclePart(deltGeo, 'deltoids');
             deltL.position.set(0, 0.05, 0); // Local to shoulder joint (upperArmL group origin)
-            // Rotation might need minor adjustment relative to arm pivot
-            upperArmL.add(deltL); // Child of upperArmL group
+            upperArmL.add(deltL);
             const deltR = createMusclePart(deltGeo.clone().rotateY(Math.PI), 'deltoids');
             deltR.position.set(0, 0.05, 0); // Local to shoulder joint (upperArmR group origin)
-            upperArmR.add(deltR); // Child of upperArmR group
+            upperArmR.add(deltR);
 
             // Biceps (Child of Upper Arm Groups)
             const bicepGeo = new THREE.CapsuleGeometry(0.06, 0.2, 4, 8);
@@ -373,7 +384,7 @@
             bicepL.rotation.x = Math.PI / 2; // Orient capsule
             upperArmL.add(bicepL);
             const bicepR = createMusclePart(bicepGeo, 'biceps');
-            bicepR.position.set(0, -armLengthUpper*0.4, 0.08); // Position relative to shoulder joint
+            bicepR.position.set(0, -armLengthUpper*0.4, 0.08);
             bicepR.rotation.x = Math.PI / 2;
             upperArmR.add(bicepR);
 
@@ -384,7 +395,7 @@
             tricepL.rotation.x = Math.PI / 2;
             upperArmL.add(tricepL);
             const tricepR = createMusclePart(tricepGeo, 'triceps');
-            tricepR.position.set(0, -armLengthUpper*0.45, -0.08); // Position relative to shoulder
+            tricepR.position.set(0, -armLengthUpper*0.45, -0.08);
             tricepR.rotation.x = Math.PI / 2;
             upperArmR.add(tricepR);
 
@@ -393,11 +404,11 @@
             const forearmL = createMusclePart(forearmGeo, 'forearms');
             forearmL.position.set(0, -armLengthLower*0.3, 0.04); // Position relative to elbow joint
             forearmL.rotation.x = Math.PI / 2; // Orient capsule
-            lowerArmL.add(forearmL); // CHILD OF LOWER ARM
+            lowerArmL.add(forearmL);
             const forearmR = createMusclePart(forearmGeo, 'forearms');
-            forearmR.position.set(0, -armLengthLower*0.3, 0.04); // Position relative to elbow joint
+            forearmR.position.set(0, -armLengthLower*0.3, 0.04);
             forearmR.rotation.x = Math.PI / 2;
-            lowerArmR.add(forearmR); // CHILD OF LOWER ARM
+            lowerArmR.add(forearmR);
 
             // Abdominals (Child of Torso)
             const absWidth = 0.35; const absHeight = 0.45; const absDepth = 0.08;
@@ -411,11 +422,9 @@
             const obqGeo = new THREE.BoxGeometry(obqWidth, obqHeight, obqDepth);
             const obqL = createMusclePart(obqGeo, 'obliques');
             obqL.position.set(-(torsoWidth/2 - 0.02), -0.1, 0); // Local to torso center, at the side
-            // obqL.rotation.y = Math.PI/10; // Less necessary now? Adjust if needed.
             torso.add(obqL);
             const obqR = createMusclePart(obqGeo, 'obliques');
-            obqR.position.set( (torsoWidth/2 - 0.02), -0.1, 0); // Local to torso center, at the side
-            // obqR.rotation.y = -Math.PI/10;
+            obqR.position.set( (torsoWidth/2 - 0.02), -0.1, 0);
             torso.add(obqR);
 
             // Back - Upper (Traps) (Child of Torso)
@@ -430,11 +439,11 @@
             const latGeo = new THREE.BoxGeometry(latWidth, latHeight, latDepth);
             const latL = createMusclePart(latGeo, 'back_lats');
             latL.position.set(-(torsoWidth/2 - latWidth/2 + 0.05), -0.1, -torsoDepth / 2 - muscleOffset * 2); // Local to torso
-            latL.rotation.y = Math.PI/12; // Slight angle
+            latL.rotation.y = Math.PI/12;
             torso.add(latL);
             const latR = createMusclePart(latGeo, 'back_lats');
-            latR.position.set( (torsoWidth/2 - latWidth/2 + 0.05), -0.1, -torsoDepth / 2 - muscleOffset * 2); // Local to torso
-            latR.rotation.y = -Math.PI/12; // Slight angle
+            latR.position.set( (torsoWidth/2 - latWidth/2 + 0.05), -0.1, -torsoDepth / 2 - muscleOffset * 2);
+            latR.rotation.y = -Math.PI/12;
             torso.add(latR);
 
             // Back - Lower (Erectors) (Child of Torso)
@@ -444,55 +453,61 @@
             backLower.position.set(0, hipOffsetY + lowBackHeight/2 + 0.1, -torsoDepth / 2 - muscleOffset); // Local to torso
             torso.add(backLower);
 
-            // Glutes (Child of Upper Leg Groups - slightly better conceptually than torso)
+            // Glutes (Child of Upper Leg Groups)
             const gluteRadius = 0.2;
             const gluteGeo = new THREE.SphereGeometry(gluteRadius, 8, 6);
-            gluteGeo.scale(1, 1, 0.8); // Flatten slightly
+            gluteGeo.scale(1, 1, 0.8);
             const gluteL = createMusclePart(gluteGeo, 'glutes');
             gluteL.position.set(0, -0.05, -0.1); // Local to hip joint
-            upperLegL.add(gluteL); // CHILD OF UPPER LEG
+            upperLegL.add(gluteL);
             const gluteR = createMusclePart(gluteGeo, 'glutes');
-            gluteR.position.set(0, -0.05, -0.1); // Local to hip joint
-            upperLegR.add(gluteR); // CHILD OF UPPER LEG
+            gluteR.position.set(0, -0.05, -0.1);
+            upperLegR.add(gluteR);
 
             // Quads (Child of Upper Leg Groups)
             const quadGeo = new THREE.CapsuleGeometry(0.12, 0.5, 4, 8);
             const quadL = createMusclePart(quadGeo, 'quads');
             quadL.position.set(0, -legLengthUpper*0.4, 0.1); // Local to hip joint, slightly forward
-            quadL.rotation.x = Math.PI / 2; // Orient capsule
-            upperLegL.add(quadL); // CHILD OF UPPER LEG
+            quadL.rotation.x = Math.PI / 2;
+            upperLegL.add(quadL);
             const quadR = createMusclePart(quadGeo, 'quads');
-            quadR.position.set(0, -legLengthUpper*0.4, 0.1); // Local to hip joint
+            quadR.position.set(0, -legLengthUpper*0.4, 0.1);
             quadR.rotation.x = Math.PI / 2;
-            upperLegR.add(quadR); // CHILD OF UPPER LEG
+            upperLegR.add(quadR);
 
             // Hamstrings (Child of Upper Leg Groups)
             const hamGeo = new THREE.CapsuleGeometry(0.1, 0.45, 4, 8);
             const hamL = createMusclePart(hamGeo, 'hamstrings');
             hamL.position.set(0, -legLengthUpper*0.45, -0.12); // Local to hip joint, slightly back
             hamL.rotation.x = Math.PI / 2;
-            upperLegL.add(hamL); // CHILD OF UPPER LEG
+            upperLegL.add(hamL);
             const hamR = createMusclePart(hamGeo, 'hamstrings');
-            hamR.position.set(0, -legLengthUpper*0.45, -0.12); // Local to hip joint
+            hamR.position.set(0, -legLengthUpper*0.45, -0.12);
             hamR.rotation.x = Math.PI / 2;
-            upperLegR.add(hamR); // CHILD OF UPPER LEG
+            upperLegR.add(hamR);
 
-            // Calves (Child of Lower Leg Groups) - THIS IS THE CRITICAL FIX
+            // Calves (Child of Lower Leg Groups)
             const calfGeo = new THREE.CapsuleGeometry(0.09, 0.35, 4, 8);
             const calfL = createMusclePart(calfGeo, 'calves');
             calfL.position.set(0, -legLengthLower*0.4, -0.08); // Local to KNEE joint, slightly back
-            calfL.rotation.x = Math.PI / 2; // Orient capsule
-            lowerLegL.add(calfL); // CHILD OF LOWER LEG GROUP
+            calfL.rotation.x = Math.PI / 2;
+            lowerLegL.add(calfL);
             const calfR = createMusclePart(calfGeo, 'calves');
-            calfR.position.set(0, -legLengthLower*0.4, -0.08); // Local to KNEE joint
+            calfR.position.set(0, -legLengthLower*0.4, -0.08);
             calfR.rotation.x = Math.PI / 2;
-            lowerLegR.add(calfR); // CHILD OF LOWER LEG GROUP
+            lowerLegR.add(calfR);
 
 
             // Initialize states
             Object.keys(muscleMeshes).forEach(key => {
                 muscleStates[key] = 'off';
             });
+
+             // Adjust camera target and OrbitControls target to new model center
+             const modelCenterY = torso.position.y; // Target the torso center
+             camera.lookAt(0, modelCenterY, 0);
+             controls.target.set(0, modelCenterY, 0);
+             controls.update();
         }
 
         // --- UI Interaction ---
@@ -513,9 +528,7 @@
                     });
                 }
             });
-
-             // Add name attribute to ground plane for easier access
-             scene.getObjectByName('groundPlane').name = 'groundPlane';
+             // No longer need to manipulate ground plane name here
         }
 
 
@@ -551,7 +564,10 @@
             }
 
             meshes.forEach(mesh => {
-                 if (mesh.material !== targetMaterial && state !== 'off') {
+                 // Optimization: only change material if it's actually different and mesh is visible
+                 if (mesh.visible === true && mesh.material !== targetMaterial && state !== 'off') {
+                     mesh.material = targetMaterial;
+                 } else if (visible && state !== 'off') { // Ensure correct material if becoming visible
                      mesh.material = targetMaterial;
                  }
                  mesh.visible = visible;
